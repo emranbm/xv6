@@ -20,10 +20,24 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+// FIFO round robin required data:
+int saf[NPROC];
+int safIndexTah;
+int safIndexSar;
+
 void
 pinit(void)
 {
+  safIndexTah = -1;
+  safIndexSar = -1;
+
   initlock(&ptable.lock, "ptable");
+}
+
+void
+proc_got_runnable(int procId){
+    safIndexTah = (safIndexTah + 1) % NPROC;
+    saf[safIndexTah] = procId;
 }
 
 //PAGEBREAK: 32
@@ -116,6 +130,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+  proc_got_runnable(p->pid);
 
   release(&ptable.lock);
 }
@@ -180,6 +195,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  proc_got_runnable(np->pid);
 
   release(&ptable.lock);
 
@@ -405,6 +421,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   proc->state = RUNNABLE;
+  proc_got_runnable(proc->pid);
   sched();
   release(&ptable.lock);
 }
@@ -476,8 +493,10 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+    if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
+      proc_got_runnable(p->pid);
+    }
 }
 
 // Wake up all processes sleeping on chan.
@@ -502,8 +521,10 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
+      if(p->state == SLEEPING){
         p->state = RUNNABLE;
+        proc_got_runnable(p->pid);
+      }
       release(&ptable.lock);
       return 0;
     }
