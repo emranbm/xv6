@@ -114,6 +114,7 @@ void            sched(void);
 void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
+int             wait2(void);
 void            wakeup(void*);
 void            yield(void);
 
@@ -152,6 +153,7 @@ int             fetchint(uint, int*);
 int             fetchstr(uint, char**);
 void            syscall(void);
 int 		getppid(void);
+int 		getPerformanceData(void);
 
 // timer.c
 void            timerinit(void);

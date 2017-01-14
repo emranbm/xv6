@@ -103,4 +103,10 @@ sys_getppid(void){
 
 }
 
+int
+sys_getPerformanceData(void){
+
+    return wait2();
+}
+
 

@@ -53,6 +53,9 @@ found:
   // set creation time.
   p->ctime = ticks;
 
+  //set turnaround time to 0.
+  p->rtime = 0;
+
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -222,8 +225,13 @@ exit(void)
     }
   }
 
+
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
+
+  // set process end time
+  proc->etime = ticks;
+
   sched();
   panic("zombie exit");
 }
@@ -259,6 +267,55 @@ wait(void)
         return pid;
       }
     }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+  }
+}
+
+int
+wait2(void)
+{
+  struct proc *p;
+  int havekids, pid;
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for exited children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->parent != proc)
+        continue;
+      havekids = 1;
+      if(p->state == ZOMBIE){
+        // Found one.
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        freevm(p->pgdir);
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        p->state = UNUSED;
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // set args
+     char *rtime=0;
+     char *wtime=0;
+     argptr(0,&rtime,sizeof(int));
+     argptr(1,&wtime,sizeof(int));
+     *rtime=proc->rtime;
+     *wtime=proc->etime - proc->ctime - proc->rtime;
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){
