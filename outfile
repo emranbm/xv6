@@ -1,0 +1,16 @@
+No command 'cmd' found, did you mean:
+ Command 'dcmd' from package 'devscripts' (main)
+ Command 'vcmd' from package 'core-network-daemon' (universe)
+ Command 'cme' from package 'libconfig-model-perl' (universe)
+ Command 'cm' from package 'config-manager' (universe)
+ Command 'amd' from package 'am-utils' (universe)
+ Command 'mmd' from package 'mtools' (main)
+ Command 'cmp' from package 'diffutils' (main)
+ Command 'qcmd' from package 'renameutils' (universe)
+ Command 'jcmd' from package 'openjdk-7-jdk' (main)
+ Command 'jcmd' from package 'openjdk-8-jdk' (universe)
+ Command 'tcmd' from package 'tcm' (universe)
+ Command 'wmd' from package 'wml' (universe)
+ Command 'icmd' from package 'renameutils' (universe)
+ Command 'mcd' from package 'mtools' (main)
+cmd: command not found
