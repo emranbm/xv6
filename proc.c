@@ -373,15 +373,10 @@ scheduler(void)
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       proc = p;
-
-      for (int i =0; i<QUANTA;i++){
-          if (p->state != RUNNABLE)
-            break;
-          switchuvm(p);
-          p->state = RUNNING;
-          swtch(&cpu->scheduler, p->context);
-          switchkvm();
-      }
+      switchuvm(p);
+      p->state = RUNNING;
+      swtch(&cpu->scheduler, p->context);
+      switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
