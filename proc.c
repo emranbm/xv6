@@ -72,8 +72,11 @@ found:
   // set creation time.
   p->ctime = ticks;
 
-  //set turnaround time to 0.
+  // set turnaround time to 0.
   p->rtime = 0;
+
+  // set priority by default to highest
+  p->priority = 2;
 
   release(&ptable.lock);
 
