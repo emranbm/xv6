@@ -51,7 +51,25 @@ int get_saf_size(void){
 }
 
 int get_priority_count(int priority){
-return 0;
+
+    if (priority == 1)
+        return get_saf_size();
+
+    int count = 0;
+    struct proc *p;
+
+
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state != RUNNABLE)
+            continue;
+
+        if (p->priority == priority)
+            count++;
+    }
+    release(&ptable.lock);
+
+    return count;
 }
 
 //PAGEBREAK: 32
@@ -377,22 +395,53 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
-    double min = 100000000;
-    int minPid = 0;
 
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-        if(p->state != RUNNABLE)
-            continue;
+    int finalPid = 0;
 
-        double current = ticks - p->ctime == 0 ? 100000000 : p->rtime / (ticks - p->ctime);
-        if (current < min){
-            min = current;
-            minPid = p->pid;
+    if (get_priority_count(2) > 0){
+
+        double min = 100000000;
+        int minPid = 0;
+
+        // Loop over process table looking for process to run.
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->state != RUNNABLE)
+                continue;
+
+            double current = ticks - p->ctime == 0 ? 100000000 : p->rtime / (ticks - p->ctime);
+            if (current < min){
+                min = current;
+                minPid = p->pid;
+            }
         }
+        release(&ptable.lock);
+
+        finalPid = minPid;
+    } else if (get_priority_count(1) > 0){
+        finalPid = pop_from_saf();
+    } else {
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->state != RUNNABLE)
+                continue;
+
+              // Switch to chosen process.  It is the process's job
+              // to release ptable.lock and then reacquire it
+              // before jumping back to us.
+              proc = p;
+              switchuvm(p);
+              p->state = RUNNING;
+              swtch(&cpu->scheduler, p->context);
+              switchkvm();
+
+              // Process is done running for now.
+              // It should have changed its p->state before coming back.
+              proc = 0;
+        }
+        release(&ptable.lock);
+        continue;
     }
-    release(&ptable.lock);
 
 
     acquire(&ptable.lock);
@@ -401,7 +450,7 @@ scheduler(void)
         continue;
 
       // check for the popped pid.
-      if(p->pid != minPid)
+      if(p->pid != finalPid)
         continue;
 
       // Switch to chosen process.  It is the process's job
