@@ -78,6 +78,7 @@ void
 push_to_saf(int procId);
 int pop_from_saf(void);
 int get_saf_size(void);
+int should_print_saf;
 
 // Process memory is laid out contiguously, low addresses first:
 //   text
