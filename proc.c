@@ -35,9 +35,14 @@ pinit(void)
 }
 
 void
-proc_got_runnable(int procId){
+push_to_saf(int procId){
     safIndexTah = (safIndexTah + 1) % NPROC;
     saf[safIndexTah] = procId;
+}
+
+int pop_from_saf(void){
+    safIndexSar = (safIndexSar + 1) % NPROC;
+    return saf[safIndexSar];
 }
 
 //PAGEBREAK: 32
@@ -130,7 +135,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  proc_got_runnable(p->pid);
+  push_to_saf(p->pid);
 
   release(&ptable.lock);
 }
@@ -195,7 +200,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  proc_got_runnable(np->pid);
+  push_to_saf(np->pid);
 
   release(&ptable.lock);
 
@@ -361,13 +366,17 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
+    int pidBadi = pop_from_saf();
+
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
-      // TODO pop from saf.
+      // check for the popped pid.
+      if(p->pid != pidBadi)
+        continue;
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -418,7 +427,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   proc->state = RUNNABLE;
-  proc_got_runnable(proc->pid);
+  push_to_saf(proc->pid);
   sched();
   release(&ptable.lock);
 }
@@ -492,7 +501,7 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
-      proc_got_runnable(p->pid);
+      push_to_saf(p->pid);
     }
 }
 
@@ -520,7 +529,7 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING){
         p->state = RUNNABLE;
-        proc_got_runnable(p->pid);
+        push_to_saf(p->pid);
       }
       release(&ptable.lock);
       return 0;
