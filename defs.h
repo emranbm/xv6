@@ -154,6 +154,7 @@ int             fetchstr(uint, char**);
 void            syscall(void);
 int 		getppid(void);
 int 		getPerformanceData(void);
+int		nice(void);
 
 // timer.c
 void            timerinit(void);

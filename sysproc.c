@@ -112,7 +112,7 @@ sys_getPerformanceData(void){
 
 
 int
-nice(void){
+sys_nice(void){
 
 	if(proc->priority==2){
 		proc->priority=1;

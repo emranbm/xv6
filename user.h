@@ -25,6 +25,7 @@ int sleep(int);
 int uptime(void);
 int getppid(void);
 int getPerformanceData(int*,int*);
+int nice(void);
 
 // ulib.c
 int stat(char*, struct stat*);
