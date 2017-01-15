@@ -110,3 +110,38 @@ sys_getPerformanceData(void){
 }
 
 
+
+int
+nice(void){
+
+	if(proc->priority==2){
+		proc->priority=1;
+
+	}else if (proc->priority == 1){
+		int i;
+		for (i=0;i<get_saf_size();i++){
+			int temp=pop_from_saf();
+			if (proc->pid == temp){
+				continue;
+			}
+			push_to_saf(temp);
+		}
+		proc->priority=0;
+	}else if (proc->priority == 0){
+		proc->priority=0;
+	}
+
+	return proc->priority;
+
+}
+
+
+
+
+
+
+
+
+
+
+
