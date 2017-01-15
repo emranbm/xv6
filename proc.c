@@ -38,6 +38,14 @@ push_to_saf(int procId){
 
 int pop_from_saf(void){
     safIndexSar = (safIndexSar + 1) % NPROC;
+    if (should_print_saf){
+        int saresaf = safIndexSar;
+        while (saresaf != safIndexTah){
+            cprintf("%d, ", saf[saresaf]);
+            saresaf = (saresaf + 1) % NPROC;
+        }
+        cprintf("\n");
+    }
     return saf[safIndexSar];
 }
 
