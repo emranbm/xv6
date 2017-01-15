@@ -155,6 +155,7 @@ void            syscall(void);
 int 		getppid(void);
 int 		getPerformanceData(void);
 int		nice(void);
+int		toggle_monitor_saf(void);
 
 // timer.c
 void            timerinit(void);
