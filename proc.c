@@ -20,42 +20,38 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
-// priority queues:
-int saf[3][NPROC];
-int safIndexTah[3];
-int safIndexSar[3];
 
 void
 pinit(void)
 {
-  safIndexSar[0] = -1;
-  safIndexSar[1] = -1;
-  safIndexSar[2] = -1;
-  safIndexTah[0] = -1;
-  safIndexTah[1] = -1;
-  safIndexTah[2] = -1;
+  safIndexTah = -1;
+  safIndexSar = -1;
 
   initlock(&ptable.lock, "ptable");
 }
 
 void
-push_to_saf(int procId, int priority){
-    safIndexTah[priority] = (safIndexTah[priority] + 1) % NPROC;
-    saf[priority][safIndexTah[priority]] = procId;
+push_to_saf(int procId){
+    safIndexTah = (safIndexTah + 1) % NPROC;
+    saf[safIndexTah] = procId;
 }
 
-int pop_from_saf(int priority){
-    safIndexSar[priority] = (safIndexSar[priority] + 1) % NPROC;
-    return saf[priority][safIndexSar[priority]];
+int pop_from_saf(void){
+    safIndexSar = (safIndexSar + 1) % NPROC;
+    return saf[safIndexSar];
 }
 
-int get_saf_size(int priority){
+int get_saf_size(void){
 
-    if(safIndexTah[priority] >= safIndexSar[priority])
-        return safIndexTah[priority] - safIndexSar[priority];
+    if(safIndexTah >= safIndexSar)
+        return safIndexTah - safIndexSar;
     else
-        return NPROC - (safIndexSar[priority] - safIndexTah[priority]);
+        return NPROC - (safIndexSar - safIndexTah);
 
+}
+
+int get_priority_count(int priority){
+return 0;
 }
 
 //PAGEBREAK: 32
@@ -151,7 +147,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  push_to_saf(p->pid, p->priority);
+  push_to_saf(p->pid);
 
   release(&ptable.lock);
 }
@@ -216,7 +212,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  push_to_saf(np->pid, np->priority);
+  push_to_saf(np->pid);
 
   release(&ptable.lock);
 
@@ -422,6 +418,7 @@ scheduler(void)
       proc = 0;
     }
     release(&ptable.lock);
+
   }
 }
 
@@ -456,7 +453,7 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   proc->state = RUNNABLE;
-  push_to_saf(proc->pid, proc->priority);
+  push_to_saf(proc->pid);
   sched();
   release(&ptable.lock);
 }
@@ -530,7 +527,7 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
-      push_to_saf(p->pid, p->priority);
+      push_to_saf(p->pid);
     }
 }
 
@@ -558,7 +555,7 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING){
         p->state = RUNNABLE;
-        push_to_saf(p->pid, p->priority);
+        push_to_saf(p->pid);
       }
       release(&ptable.lock);
       return 0;

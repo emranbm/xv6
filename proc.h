@@ -69,6 +69,16 @@ struct proc {
   int priority;
 };
 
+
+// FIFO round robin required data:
+int saf[NPROC];
+int safIndexTah;
+int safIndexSar;
+void
+push_to_saf(int procId);
+int pop_from_saf(void);
+int get_saf_size(void);
+
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss
