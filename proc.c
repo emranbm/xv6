@@ -346,6 +346,15 @@ wait2(void)
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
+
+    // set args
+     char *rtime=0;
+     char *wtime=0;
+     argptr(0,&rtime,sizeof(int));
+     argptr(1,&wtime,sizeof(int));
+     *rtime=proc->rtime;
+     *wtime=proc->etime - proc->ctime - proc->rtime;
+
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
@@ -360,13 +369,6 @@ wait2(void)
       }
     }
 
-    // set args
-     char *rtime=0;
-     char *wtime=0;
-     argptr(0,&rtime,sizeof(int));
-     argptr(1,&wtime,sizeof(int));
-     *rtime=proc->rtime;
-     *wtime=proc->etime - proc->ctime - proc->rtime;
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){

@@ -42,7 +42,17 @@ push_to_saf(int procId){
 
 int pop_from_saf(void){
     safIndexSar = (safIndexSar + 1) % NPROC;
+    //cprintf("##%d##", saf[safIndexSar]);
     return saf[safIndexSar];
+}
+
+int get_saf_size(void){
+
+    if(safIndexTah >= safIndexSar)
+        return safIndexTah - safIndexSar;
+    else
+        return NPROC - (safIndexSar - safIndexTah);
+
 }
 
 //PAGEBREAK: 32
@@ -200,7 +210,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  push_to_saf(np->pid);
+  push_to_saf(pid);
 
   release(&ptable.lock);
 
@@ -315,6 +325,17 @@ wait2(void)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){
+
+
+    // set args
+     char *rtime=0;
+     char *wtime=0;
+     argptr(0,&rtime,sizeof(int));
+     argptr(1,&wtime,sizeof(int));
+     *rtime=proc->rtime;
+     *wtime=proc->etime - proc->ctime - proc->rtime;
+
+
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -329,14 +350,6 @@ wait2(void)
         return pid;
       }
     }
-
-    // set args
-     char *rtime=0;
-     char *wtime=0;
-     argptr(0,&rtime,sizeof(int));
-     argptr(1,&wtime,sizeof(int));
-     *rtime=proc->rtime;
-     *wtime=proc->etime - proc->ctime - proc->rtime;
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){
