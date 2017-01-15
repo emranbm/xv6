@@ -135,7 +135,14 @@ sys_nice(void){
 
 }
 
-
+int
+sys_toggle_monitor_saf(void){
+	if (should_print_saf==1)
+		should_print_saf=0;
+	else
+		should_print_saf=1;
+return 0;
+}
 
 
 

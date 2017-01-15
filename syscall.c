@@ -101,6 +101,7 @@ extern int sys_uptime(void);
 extern int sys_getppid(void);
 extern int sys_getPerformanceData(void);
 extern int sys_nice(void);
+extern int sys_toggle_monitor_saf(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,6 +128,7 @@ static int (*syscalls[])(void) = {
 [SYS_getppid] sys_getppid,
 [SYS_getPerformanceData] sys_getPerformanceData,
 [SYS_nice] sys_nice,
+[SYS_toggle_monitor_saf] sys_toggle_monitor_saf,
 };
 
 void
