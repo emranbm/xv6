@@ -118,6 +118,7 @@ sys_nice(void){
 		proc->priority=1;
 
 	}else if (proc->priority == 1){
+		proc->priority=0;
 		int i;
 		for (i=0;i<get_saf_size();i++){
 			int temp=pop_from_saf();
@@ -126,7 +127,6 @@ sys_nice(void){
 			}
 			push_to_saf(temp);
 		}
-		proc->priority=0;
 	}else if (proc->priority == 0){
 		proc->priority=0;
 	}

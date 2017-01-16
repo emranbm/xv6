@@ -35,6 +35,20 @@ pinit(void)
 }
 
 void
+print_saf(void){
+    // print saf
+    if (should_print_saf){
+        int saresaf = safIndexSar;
+        cprintf("Saf: ");
+        while (saresaf != safIndexTah){
+            cprintf("%d, ", saf[saresaf]);
+            saresaf = (saresaf + 1) % NPROC;
+        }
+        cprintf("\n");
+    }
+}
+
+void
 push_to_saf(int procId){
     safIndexTah = (safIndexTah + 1) % NPROC;
     saf[safIndexTah] = procId;
@@ -43,6 +57,15 @@ push_to_saf(int procId){
 int pop_from_saf(void){
     safIndexSar = (safIndexSar + 1) % NPROC;
     return saf[safIndexSar];
+}
+
+int get_saf_size(void){
+
+    if(safIndexTah >= safIndexSar)
+        return safIndexTah - safIndexSar;
+    else
+        return NPROC - (safIndexSar - safIndexTah);
+
 }
 
 //PAGEBREAK: 32
@@ -200,7 +223,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  push_to_saf(np->pid);
+  push_to_saf(pid);
 
   release(&ptable.lock);
 
@@ -315,6 +338,17 @@ wait2(void)
         continue;
       havekids = 1;
       if(p->state == ZOMBIE){
+
+
+    // set args
+     char *rtime=0;
+     char *wtime=0;
+     argptr(0,&rtime,sizeof(int));
+     argptr(1,&wtime,sizeof(int));
+     *rtime=proc->rtime;
+     *wtime=proc->etime - proc->ctime - proc->rtime;
+
+
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -329,14 +363,6 @@ wait2(void)
         return pid;
       }
     }
-
-    // set args
-     char *rtime=0;
-     char *wtime=0;
-     argptr(0,&rtime,sizeof(int));
-     argptr(1,&wtime,sizeof(int));
-     *rtime=proc->rtime;
-     *wtime=proc->etime - proc->ctime - proc->rtime;
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){
@@ -366,7 +392,23 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
-    int pidBadi = pop_from_saf();
+    int pidBadi = -1;
+
+    if (get_saf_size() == 0) {
+        // try to push some runnables to saf.
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == RUNNABLE)
+            push_to_saf(p->pid);
+        }
+        release(&ptable.lock);
+    }
+
+    if (get_saf_size() == 0)
+        // There are really no process in queue
+        continue;
+
+    pidBadi = pop_from_saf();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
@@ -375,7 +417,7 @@ scheduler(void)
         continue;
 
       // check for the popped pid.
-      if(p->pid != pidBadi)
+      if(pidBadi != -1 && p->pid != pidBadi)
         continue;
 
       // Switch to chosen process.  It is the process's job
@@ -386,6 +428,8 @@ scheduler(void)
       p->state = RUNNING;
       swtch(&cpu->scheduler, p->context);
       switchkvm();
+
+      print_saf();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.

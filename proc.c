@@ -31,6 +31,20 @@ pinit(void)
 }
 
 void
+print_saf(void){
+    // print saf
+    if (should_print_saf){
+        int saresaf = safIndexSar;
+        cprintf("Saf: ");
+        while (saresaf != safIndexTah){
+            cprintf("%d, ", saf[saresaf]);
+            saresaf = (saresaf + 1) % NPROC;
+        }
+        cprintf("\n");
+    }
+}
+
+void
 push_to_saf(int procId){
     safIndexTah = (safIndexTah + 1) % NPROC;
     saf[safIndexTah] = procId;
@@ -243,6 +257,10 @@ fork(void)
 void
 exit(void)
 {
+
+  // set etime
+  proc->etime = ticks;
+
   struct proc *p;
   int fd;
 
@@ -280,8 +298,6 @@ exit(void)
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
 
-  // set process end time
-  proc->etime = ticks;
 
   sched();
   panic("zombie exit");
@@ -346,6 +362,9 @@ wait2(void)
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
+
+
+
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
@@ -355,18 +374,20 @@ wait2(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+
+        // set args
+        char *rtime=0;
+        char *wtime=0;
+        argptr(0,&rtime,sizeof(int));
+        argptr(1,&wtime,sizeof(int));
+        *rtime=p->rtime;
+        *wtime=p->etime - p->ctime - p->rtime;
+
         release(&ptable.lock);
         return pid;
       }
     }
 
-    // set args
-     char *rtime=0;
-     char *wtime=0;
-     argptr(0,&rtime,sizeof(int));
-     argptr(1,&wtime,sizeof(int));
-     *rtime=proc->rtime;
-     *wtime=proc->etime - proc->ctime - proc->rtime;
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){
@@ -397,6 +418,16 @@ scheduler(void)
     sti();
 
     int finalPid = 0;
+
+    if (get_saf_size() == 0) {
+        // try to push some runnables to saf.
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == RUNNABLE && p->priority == 1)
+            push_to_saf(p->pid);
+        }
+        release(&ptable.lock);
+    }
 
     if (get_priority_count(2) > 0){
 
@@ -434,6 +465,8 @@ scheduler(void)
               p->state = RUNNING;
               swtch(&cpu->scheduler, p->context);
               switchkvm();
+
+
 
               // Process is done running for now.
               // It should have changed its p->state before coming back.
