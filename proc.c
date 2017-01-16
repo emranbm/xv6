@@ -31,6 +31,20 @@ pinit(void)
 }
 
 void
+print_saf(void){
+    // print saf
+    if (should_print_saf){
+        int saresaf = safIndexSar;
+        cprintf("Saf: ");
+        while (saresaf != safIndexTah){
+            cprintf("%d, ", saf[saresaf]);
+            saresaf = (saresaf + 1) % NPROC;
+        }
+        cprintf("\n");
+    }
+}
+
+void
 push_to_saf(int procId){
     safIndexTah = (safIndexTah + 1) % NPROC;
     saf[safIndexTah] = procId;
@@ -38,14 +52,6 @@ push_to_saf(int procId){
 
 int pop_from_saf(void){
     safIndexSar = (safIndexSar + 1) % NPROC;
-    if (should_print_saf){
-        int saresaf = safIndexSar;
-        while (saresaf != safIndexTah){
-            cprintf("%d, ", saf[saresaf]);
-            saresaf = (saresaf + 1) % NPROC;
-        }
-        cprintf("\n");
-    }
     return saf[safIndexSar];
 }
 
@@ -408,6 +414,16 @@ scheduler(void)
 
     int finalPid = 0;
 
+    if (get_saf_size() == 0) {
+        // try to push some runnables to saf.
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == RUNNABLE)
+            push_to_saf(p->pid);
+        }
+        release(&ptable.lock);
+    }
+
     if (get_priority_count(2) > 0){
 
         double min = 100000000;
@@ -444,6 +460,8 @@ scheduler(void)
               p->state = RUNNING;
               swtch(&cpu->scheduler, p->context);
               switchkvm();
+
+
 
               // Process is done running for now.
               // It should have changed its p->state before coming back.
