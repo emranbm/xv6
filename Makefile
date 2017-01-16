@@ -176,6 +176,7 @@ UPROGS=\
 	_getppid\
 	_waittest\
 	_frrTest\
+	_sanity\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
