@@ -63,7 +63,7 @@ main(void)
 int getPriority(int children[], int childPid) {
     for (int i = 0; i < FORK_NUM; i++){
         if (children[i] == childPid)
-            return (i + 1) % 3;
+            return 2 - ((i + 1) % 3);
     }
 
     return -1;
