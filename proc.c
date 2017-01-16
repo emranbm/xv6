@@ -418,7 +418,7 @@ scheduler(void)
         // try to push some runnables to saf.
         acquire(&ptable.lock);
         for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-        if(p->state == RUNNABLE)
+        if(p->state == RUNNABLE && p->priority == 1)
             push_to_saf(p->pid);
         }
         release(&ptable.lock);
