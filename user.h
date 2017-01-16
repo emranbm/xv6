@@ -27,6 +27,9 @@ int getppid(void);
 int getPerformanceData(int*,int*);
 int nice(void);
 int toggle_monitor_saf(void);
+int toggle_print_lock(void);
+int get_print_lock(void);
+
 
 // ulib.c
 int stat(char*, struct stat*);

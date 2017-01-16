@@ -175,6 +175,8 @@ UPROGS=\
 	_zombie\
 	_getppid\
 	_waittest\
+	_RRSanity\
+	_grtSanity\
 	_frrTest\
 	_sanity\
 

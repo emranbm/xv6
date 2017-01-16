@@ -80,6 +80,10 @@ int pop_from_saf(void);
 int get_saf_size(void);
 int should_print_saf;
 
+
+//lock for hadling printf
+int print_lock;
+
 // Process memory is laid out contiguously, low addresses first:
 //   text
 //   original data and bss
