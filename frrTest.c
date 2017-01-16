@@ -10,6 +10,8 @@ main(void)
 
     int children[FORK_NUM];
 
+    toggle_monitor_saf();
+
     for (int i = 0; i < FORK_NUM; i++){
         children[i] = fork();
         if (children[i] == 0){
@@ -26,8 +28,10 @@ main(void)
         int w,r;
         getPerformanceData(&w,&r);
 
-        printf(2, "w: %d, r: %d\n", w,r);
+        printf(2, "wTime: %d, rTime: %d\n", w,r);
     }
+
+    toggle_monitor_saf();
 
     exit();
 
