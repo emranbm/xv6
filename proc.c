@@ -30,6 +30,17 @@ pinit(void)
   initlock(&ptable.lock, "ptable");
 }
 
+int
+saf_contains(int item){
+    int safSize = get_saf_size();
+    for (int i = 0; i < safSize; i++){
+        if (item == saf[(safIndexSar + i) % NPROC])
+            return 1;
+    }
+
+    return 0;
+}
+
 void
 print_saf(void){
     // print saf
@@ -46,6 +57,10 @@ print_saf(void){
 
 void
 push_to_saf(int procId){
+
+//    if (saf_contains(procId))
+//        return;
+
     safIndexTah = (safIndexTah + 1) % NPROC;
     saf[safIndexTah] = procId;
 }
@@ -154,7 +169,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
+
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");

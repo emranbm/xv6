@@ -30,6 +30,17 @@ pinit(void)
   initlock(&ptable.lock, "ptable");
 }
 
+int
+saf_contains(int item){
+    int safSize = get_saf_size();
+    for (int i = 0; i < safSize; i++){
+        if (item == saf[(safIndexSar + i) % NPROC])
+            return 1;
+    }
+
+    return 0;
+}
+
 void
 print_saf(void){
     // print saf
@@ -46,6 +57,10 @@ print_saf(void){
 
 void
 push_to_saf(int procId){
+
+    if (saf_contains(procId))
+        return;
+
     safIndexTah = (safIndexTah + 1) % NPROC;
     saf[safIndexTah] = procId;
 }
