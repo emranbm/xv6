@@ -194,7 +194,8 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
-  push_to_saf(p->pid);
+  if (p->priority == 1)
+    push_to_saf(p->pid);
 
   release(&ptable.lock);
 }
@@ -259,7 +260,8 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-  push_to_saf(np->pid);
+//  if (np->priority == 1)
+    push_to_saf(np->pid);
 
   release(&ptable.lock);
 
@@ -550,7 +552,8 @@ yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
   proc->state = RUNNABLE;
-  push_to_saf(proc->pid);
+//  if (proc->priority == 1)
+    push_to_saf(proc->pid);
   sched();
   release(&ptable.lock);
 }
@@ -624,7 +627,8 @@ wakeup1(void *chan)
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == SLEEPING && p->chan == chan){
       p->state = RUNNABLE;
-      push_to_saf(p->pid);
+//      if (p->priority == 1)
+        push_to_saf(p->pid);
     }
 }
 
@@ -652,7 +656,8 @@ kill(int pid)
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING){
         p->state = RUNNABLE;
-        push_to_saf(p->pid);
+//        if (p->priority == 1)
+            push_to_saf(p->pid);
       }
       release(&ptable.lock);
       return 0;
