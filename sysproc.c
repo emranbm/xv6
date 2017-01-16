@@ -153,6 +153,11 @@ sys_toggle_print_lock(void){
 return 0;
 }
 
+int
+sys_get_print_lock(void){
+	return print_lock;
+}
+
 
 
 

@@ -24,3 +24,5 @@
 #define SYS_getPerformanceData 23
 #define SYS_nice 24
 #define SYS_toggle_monitor_saf 25
+#define SYS_toggle_print_lock 26
+#define SYS_get_print_lock 27

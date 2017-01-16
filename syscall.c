@@ -102,6 +102,8 @@ extern int sys_getppid(void);
 extern int sys_getPerformanceData(void);
 extern int sys_nice(void);
 extern int sys_toggle_monitor_saf(void);
+extern int sys_toggle_print_lock(void);
+extern int sys_get_print_lock(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -129,6 +131,8 @@ static int (*syscalls[])(void) = {
 [SYS_getPerformanceData] sys_getPerformanceData,
 [SYS_nice] sys_nice,
 [SYS_toggle_monitor_saf] sys_toggle_monitor_saf,
+[SYS_toggle_print_lock] sys_toggle_print_lock,
+[SYS_get_print_lock] sys_get_print_lock,
 };
 
 void
