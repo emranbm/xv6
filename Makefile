@@ -175,6 +175,8 @@ UPROGS=\
 	_zombie\
 	_getppid\
 	_waittest\
+	_RRSanity\
+	_grtSanity\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

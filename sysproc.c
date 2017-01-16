@@ -144,6 +144,15 @@ sys_toggle_monitor_saf(void){
 return 0;
 }
 
+int
+sys_toggle_print_lock(void){
+	if(print_lock==1)
+		print_lock=0;
+	else
+		print_lock=1;
+return 0;
+}
+
 
 
 
