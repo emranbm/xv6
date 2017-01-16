@@ -257,6 +257,10 @@ fork(void)
 void
 exit(void)
 {
+
+  // set etime
+  proc->etime = ticks;
+
   struct proc *p;
   int fd;
 
@@ -294,8 +298,6 @@ exit(void)
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
 
-  // set process end time
-  proc->etime = ticks;
 
   sched();
   panic("zombie exit");
@@ -361,13 +363,7 @@ wait2(void)
       if(p->state == ZOMBIE){
         // Found one.
 
-    // set args
-     char *rtime=0;
-     char *wtime=0;
-     argptr(0,&rtime,sizeof(int));
-     argptr(1,&wtime,sizeof(int));
-     *rtime=proc->rtime;
-     *wtime=proc->etime - proc->ctime - proc->rtime;
+
 
         pid = p->pid;
         kfree(p->kstack);
@@ -378,6 +374,15 @@ wait2(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+
+        // set args
+        char *rtime=0;
+        char *wtime=0;
+        argptr(0,&rtime,sizeof(int));
+        argptr(1,&wtime,sizeof(int));
+        *rtime=p->rtime;
+        *wtime=p->etime - p->ctime - p->rtime;
+
         release(&ptable.lock);
         return pid;
       }
