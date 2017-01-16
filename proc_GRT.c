@@ -20,10 +20,6 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
-// FIFO round robin required data:
-int saf[NPROC];
-int safIndexTah;
-int safIndexSar;
 
 void
 pinit(void)
@@ -35,14 +31,59 @@ pinit(void)
 }
 
 void
+print_saf(void){
+    // print saf
+    if (should_print_saf){
+        int saresaf = safIndexSar;
+        cprintf("Saf: ");
+        while (saresaf != safIndexTah){
+            cprintf("%d, ", saf[saresaf]);
+            saresaf = (saresaf + 1) % NPROC;
+        }
+        cprintf("\n");
+    }
+}
+
+void
 push_to_saf(int procId){
     safIndexTah = (safIndexTah + 1) % NPROC;
-    //saf[safIndexTah] = procId;
+    saf[safIndexTah] = procId;
 }
 
 int pop_from_saf(void){
     safIndexSar = (safIndexSar + 1) % NPROC;
     return saf[safIndexSar];
+}
+
+int get_saf_size(void){
+
+    if(safIndexTah >= safIndexSar)
+        return safIndexTah - safIndexSar;
+    else
+        return NPROC - (safIndexSar - safIndexTah);
+
+}
+
+int get_priority_count(int priority){
+
+    if (priority == 1)
+        return get_saf_size();
+
+    int count = 0;
+    struct proc *p;
+
+
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state != RUNNABLE)
+            continue;
+
+        if (p->priority == priority)
+            count++;
+    }
+    release(&ptable.lock);
+
+    return count;
 }
 
 //PAGEBREAK: 32
@@ -72,8 +113,11 @@ found:
   // set creation time.
   p->ctime = ticks;
 
-  //set turnaround time to 0.
+  // set turnaround time to 0.
   p->rtime = 0;
+
+  // set priority by default to highest
+  p->priority = 2;
 
   release(&ptable.lock);
 
@@ -110,7 +154,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
+
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -213,6 +257,10 @@ fork(void)
 void
 exit(void)
 {
+
+  // set etime
+  proc->etime = ticks;
+
   struct proc *p;
   int fd;
 
@@ -250,8 +298,6 @@ exit(void)
   // Jump into the scheduler, never to return.
   proc->state = ZOMBIE;
 
-  // set process end time
-  proc->etime = ticks;
 
   sched();
   panic("zombie exit");
@@ -316,6 +362,9 @@ wait2(void)
       havekids = 1;
       if(p->state == ZOMBIE){
         // Found one.
+
+
+
         pid = p->pid;
         kfree(p->kstack);
         p->kstack = 0;
@@ -325,18 +374,20 @@ wait2(void)
         p->name[0] = 0;
         p->killed = 0;
         p->state = UNUSED;
+
+        // set args
+        char *rtime=0;
+        char *wtime=0;
+        argptr(0,&rtime,sizeof(int));
+        argptr(1,&wtime,sizeof(int));
+        *rtime=p->rtime;
+        *wtime=p->etime - p->ctime - p->rtime;
+
         release(&ptable.lock);
         return pid;
       }
     }
 
-    // set args
-     char *rtime=0;
-     char *wtime=0;
-     argptr(0,&rtime,sizeof(int));
-     argptr(1,&wtime,sizeof(int));
-     *rtime=proc->rtime;
-     *wtime=proc->etime - proc->ctime - proc->rtime;
 
     // No point waiting if we don't have any children.
     if(!havekids || proc->killed){
@@ -360,54 +411,54 @@ wait2(void)
 void
 scheduler(void)
 {
-  struct proc *p;
+    struct proc *p;
 
-  for(;;){
-    // Enable interrupts on this processor.
-    sti();
-    double min = 100000000;
-    int minPid = 0;
+    for(;;){
+      // Enable interrupts on this processor.
+      sti();
+      double min = 100000000;
+      int minPid = 0;
 
-    // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      // Loop over process table looking for process to run.
+      acquire(&ptable.lock);
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+          if(p->state != RUNNABLE)
+              continue;
+
+          double current = ticks - p->ctime == 0 ? 100000000 : p->rtime / (ticks - p->ctime);
+          if (current < min){
+              min = current;
+              minPid = p->pid;
+          }
+      }
+      release(&ptable.lock);
+
+
+      acquire(&ptable.lock);
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
         if(p->state != RUNNABLE)
-            continue;
+          continue;
 
-        double current = ticks - p->ctime == 0 ? 100000000 : p->rtime / (ticks - p->ctime);
-        if (current < min){
-            min = current;
-            minPid = p->pid;
-        }
+        // check for the popped pid.
+        if(p->pid != minPid)
+          continue;
+
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&cpu->scheduler, p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        proc = 0;
+      }
+      release(&ptable.lock);
+
     }
-    release(&ptable.lock);
-
-
-    acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // check for the popped pid.
-      if(p->pid != minPid)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      swtch(&cpu->scheduler, p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      proc = 0;
-    }
-    release(&ptable.lock);
-
-  }
 }
 
 // Enter scheduler.  Must hold only ptable.lock

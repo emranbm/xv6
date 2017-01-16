@@ -154,7 +154,7 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-
+  
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -417,32 +417,73 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
-    int pidBadi = -1;
+    int finalPid = 0;
 
     if (get_saf_size() == 0) {
         // try to push some runnables to saf.
         acquire(&ptable.lock);
         for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-        if(p->state == RUNNABLE)
+        if(p->state == RUNNABLE && p->priority == 1)
             push_to_saf(p->pid);
         }
         release(&ptable.lock);
     }
 
-    if (get_saf_size() == 0)
-        // There are really no process in queue
+    if (get_priority_count(2) > 0){
+
+        double min = 100000000;
+        int minPid = 0;
+
+        // Loop over process table looking for process to run.
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->state != RUNNABLE)
+                continue;
+
+            double current = ticks - p->ctime == 0 ? 100000000 : p->rtime / (ticks - p->ctime);
+            if (current < min){
+                min = current;
+                minPid = p->pid;
+            }
+        }
+        release(&ptable.lock);
+
+        finalPid = minPid;
+    } else if (get_priority_count(1) > 0){
+        finalPid = pop_from_saf();
+    } else {
+        acquire(&ptable.lock);
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->state != RUNNABLE)
+                continue;
+
+              // Switch to chosen process.  It is the process's job
+              // to release ptable.lock and then reacquire it
+              // before jumping back to us.
+              proc = p;
+              switchuvm(p);
+              p->state = RUNNING;
+              swtch(&cpu->scheduler, p->context);
+              switchkvm();
+
+
+
+              // Process is done running for now.
+              // It should have changed its p->state before coming back.
+              proc = 0;
+        }
+        release(&ptable.lock);
         continue;
+    }
 
-    pidBadi = pop_from_saf();
 
-    // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
       // check for the popped pid.
-      if(pidBadi != -1 && p->pid != pidBadi)
+      if(p->pid != finalPid)
         continue;
 
       // Switch to chosen process.  It is the process's job
@@ -453,8 +494,6 @@ scheduler(void)
       p->state = RUNNING;
       swtch(&cpu->scheduler, p->context);
       switchkvm();
-
-      print_saf();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
